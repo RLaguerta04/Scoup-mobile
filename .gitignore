@@ -41,3 +41,11 @@ example
 # generated native folders
 /ios
 /android
+
+# local build/export artifacts (do not commit)
+*.zip
+*.apk
+*.aab
+*.mp4
+expo-qr.png
+expo-go-qr.html

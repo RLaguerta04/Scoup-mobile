@@ -1,56 +1,84 @@
-# Welcome to your Expo app 👋
+# Scoup Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Mobile-first, **API-ready** React Native app for Scoup Media Meter. Previews in **Expo
+Go**; runs on realistic sample data now and swaps to the real backend by flipping one flag
+— no UI changes.
 
-## Get started
+## Stack
 
-1. Install dependencies
+Expo (SDK 58) · Expo Router (file-based nav) · TypeScript · NativeWind v4 (Tailwind) ·
+TanStack Query · Zustand · React Hook Form + Zod · @gorhom/bottom-sheet ·
+react-native-maps · react-native-gifted-charts · Archivo + Chivo Mono fonts.
 
-   ```bash
-   npm install
-   ```
+All chosen to run **inside Expo Go** (no custom dev build needed to prototype).
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it
 
 ```bash
-npm run reset-project
+cd scoup-mobile
+
+# On your phone (Expo Go) — recommended
+npx expo start            # scan the QR with the Expo Go app (iOS/Android)
+
+# In a browser (quick layout checks; native map + bottom sheets are device-only)
+npx expo start --web
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+> **Android + the Map tab:** react-native-maps uses Google Maps on Android and needs an
+> API key (`android.config.googleMaps.apiKey` in `app.json`). On **iOS** it uses Apple Maps
+> and works key-free. The web build shows a city-chip fallback instead of the live map.
 
-### Other setup steps
+## Architecture (clean, swappable layers)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```
+src/
+  app/                      Expo Router screens + navigation
+    (tabs)/                 Feed · Map · Decisions · Library · More
+    story/[id].tsx          story detail (pushed stack screen)
+    _layout.tsx             providers: fonts, QueryClient, gesture/safe-area, bottom-sheet
+  components/               design system (ui/*, charts/*, AppHeader)
+  features/                 feed/*, map/*  (screen-specific components)
+  services/api/
+    scoup.ts                endpoint fns — the ONE mock/real switch (USE_MOCKS)
+    queries.ts              TanStack Query hooks (all screens read data through these)
+    client.ts               axios client for the real API (auth + base URL)
+  data/mock/                entities + deterministic generators (view-models)
+  stores/                   zustand: selection (newsletter), filters
+  theme/tokens.ts           colors + Okabe–Ito viz palette (ported from the web app)
+  types/                    domain view-models
+  lib/                      config (USE_MOCKS, API_URL), queryClient, format helpers
+```
 
-## Learn more
+**Rule:** a screen never calls the network directly — it uses a `useX()` query hook →
+`services/api` → mock (now) or real API (later).
 
-To learn more about developing your project with Expo, look at the following resources:
+## API-ready: mock → real
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Default: `USE_MOCKS = true` (sample data, with simulated latency so loading states are
+  real). Set `EXPO_PUBLIC_USE_MOCKS=false` + `EXPO_PUBLIC_API_URL=<backend>` to go live.
+- Each endpoint fn in `services/api/scoup.ts` documents its real route + where the response
+  mapper goes. Screens consume typed **view-models**, so swapping the data source needs
+  **no component changes**.
 
-## Join the community
+## Design system
 
-Join our community of developers creating universal apps.
+Ported from the web app's tokens: cream `#faf9f5` surfaces, near-black ink, amber brand
+accent, and the **Okabe–Ito colorblind-safe** palette for tone/sentiment. Type is Archivo
+(UI) + Chivo Mono (uppercase micro-labels + numbers). Primitives in `components/ui` +
+`components/charts` map ~1:1 to the web's Shadcn set.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## What's built
+
+- **Feed** — Stories / Articles / Posts (segmented), date-range chips, story cards →
+  detail, and the **This period** analytics in a swipe-up sheet (results, AVE, tone,
+  mobile heatmap, AVE-by-medium, social).
+- **Map** — full-screen Metro Manila map (native) with count markers → place bottom sheet
+  (Sentiment / Most posts / Top posts). Web shows a city-chip fallback.
+- **Decisions / Library / More** — present as tabs; fill in next.
+
+## Notes
+
+- Bottom sheets (@gorhom) render on device; on react-native-web they can be finicky — use
+  a phone to review the This-period and place sheets.
+- The story-detail deep sections (Narrative / Social / Coverage) use placeholder prose;
+  wire to per-story endpoints when the API lands.
